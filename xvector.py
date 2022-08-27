@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 import os
 
-BATCH_SIZE = 30
+BATCH_SIZE = 128
 class MyDataset(Dataset):
     def __init__(self, root_dir, label_dir):
         self.root_dir = root_dir
@@ -108,9 +108,18 @@ print(net)
 loss_fn = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(net.parameters(), lr=0.0005)
 
+
+def bar(rate):
+    total = 30
+    ss = f'{round(rate * 100, 2)}%'
+    for i in range(round(total * rate)):
+        ss += '＞'
+    print(ss, end='\r')
+
 def train(dataloader, model, loss_fn, optimizer):
     size = len(dataloader.dataset)
     model.train()
+    current = 0
     for batch, (X, y) in enumerate(dataloader):
         # Compute prediction error
         pred = model(X, 0.01)
@@ -120,9 +129,9 @@ def train(dataloader, model, loss_fn, optimizer):
         loss.backward()
         optimizer.step()
 
-        if batch % 90 == 0:
-            loss, current = loss.item(), batch * len(X)
-            print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+        loss, current = loss.item(), current + len(X)
+        bar(current/size)
+    print('')
 
 
 def test(dataloader, model, loss_fn):
@@ -137,13 +146,15 @@ def test(dataloader, model, loss_fn):
             correct += (pred.argmax(1) == y).type(torch.float).sum().item()
     test_loss /= num_batches
     correct /= size
-    print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
+    print(f"Test Error:  Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
 
 
 epoch = 500
 for i in range(epoch):
+    print(f'epoch:{i+1}/{epoch}')
     train(loader, net, loss_fn, optimizer)
     test(test_loader, net, loss_fn)
+
 
 
 
